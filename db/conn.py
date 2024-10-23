@@ -3,7 +3,6 @@
 """
 封装的数据库接口
 """
-import json
 import logging
 import sys
 from config import DATABASE_PATH
@@ -17,12 +16,12 @@ import threading
 logging.basicConfig(stream=sys.stdout, format="%(asctime)s-%(levelname)s:%(name)s:%(message)s", level='INFO')
 logger = logging.getLogger('conn')
 
-
 conn = sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
 # 线程锁
 conn_lock = threading.Lock()
 # 进程锁
 proc_lock = None
+
 
 def set_proc_lock(proc_lock_sub):
     """
@@ -31,6 +30,7 @@ def set_proc_lock(proc_lock_sub):
     """
     global proc_lock
     proc_lock = proc_lock_sub
+
 
 def pushNewFetch(fetcher_name, protocol, ip, port):
     """
@@ -53,7 +53,7 @@ def pushNewFetch(fetcher_name, protocol, ip, port):
     # 更新proxies表
     c.execute('SELECT * FROM proxies WHERE protocol=? AND ip=? AND port=?', (p.protocol, p.ip, p.port))
     row = c.fetchone()
-    if row is not None: # 已经存在(protocol, ip, port)
+    if row is not None:  # 已经存在(protocol, ip, port)
         old_p = Proxy.decode(row)
         c.execute("""
             UPDATE proxies SET fetcher_name=?,to_validate_date=? WHERE protocol=? AND ip=? AND port=?
@@ -64,6 +64,7 @@ def pushNewFetch(fetcher_name, protocol, ip, port):
     conn.commit()
     conn_lock.release()
     proc_lock.release()
+
 
 def getToValidate(max_count=1):
     """
@@ -94,6 +95,7 @@ def getToValidate(max_count=1):
     proc_lock.release()
     return proxies
 
+
 def pushValidateResult(proxy, success, latency):
     """
     将验证器的一个结果添加进数据库中
@@ -120,12 +122,13 @@ def pushValidateResult(proxy, success, latency):
             SET fetcher_name=?,validated=?,latency=?,validate_date=?,to_validate_date=?,validate_failed_cnt=?,country=?
             WHERE protocol=? AND ip=? AND port=?
         """, (
-            p.fetcher_name, p.validated, p.latency, p.validate_date, p.to_validate_date, p.validate_failed_cnt,
-            p.protocol, p.ip, p.port, ip_country
+            p.fetcher_name, p.validated, p.latency, p.validate_date, p.to_validate_date, p.validate_failed_cnt,ip_country,
+            p.protocol, p.ip, p.port
         ))
     conn.commit()
     conn_lock.release()
     proc_lock.release()
+
 
 def getValidatedRandom(max_count):
     """
@@ -144,8 +147,10 @@ def getValidatedRandom(max_count):
     conn_lock.release()
     proc_lock.release()
     return proxies
-    
-    #新增方法
+
+    # 新增方法
+
+
 def get_by_protocol(protocol, max_count):
     """
     查询 protocol 字段为指定值的代理服务器记录
@@ -155,7 +160,8 @@ def get_by_protocol(protocol, max_count):
     conn_lock.acquire()
     proc_lock.acquire()
     if max_count > 0:
-        r = conn.execute('SELECT * FROM proxies WHERE protocol=? AND validated=? ORDER BY RANDOM() LIMIT ?', (protocol, True, max_count))
+        r = conn.execute('SELECT * FROM proxies WHERE protocol=? AND validated=? ORDER BY RANDOM() LIMIT ?',
+                         (protocol, True, max_count))
     else:
         r = conn.execute('SELECT * FROM proxies WHERE protocol=? AND validated=? ORDER BY RANDOM()', (protocol, True))
     proxies = [Proxy.decode(row) for row in r]
@@ -163,6 +169,7 @@ def get_by_protocol(protocol, max_count):
     conn_lock.release()
     proc_lock.release()
     return proxies
+
 
 def pushFetcherResult(name, proxies_cnt):
     """
@@ -191,6 +198,7 @@ def pushFetcherResult(name, proxies_cnt):
     conn_lock.release()
     proc_lock.release()
 
+
 def pushFetcherEnable(name, enable):
     """
     设置是否起用对应爬取器，被禁用的爬取器将不会被运行
@@ -216,6 +224,7 @@ def pushFetcherEnable(name, enable):
     conn_lock.release()
     proc_lock.release()
 
+
 def getAllFetchers():
     """
     获取所有的爬取器以及状态
@@ -229,6 +238,7 @@ def getAllFetchers():
     conn_lock.release()
     proc_lock.release()
     return fetchers
+
 
 def getFetcher(name):
     """
@@ -247,6 +257,7 @@ def getFetcher(name):
     else:
         return Fetcher.decode(row)
 
+
 def getProxyCount(fetcher_name):
     """
     查询在数据库中有多少个由指定爬取器爬取到的代理
@@ -261,6 +272,7 @@ def getProxyCount(fetcher_name):
     conn_lock.release()
     proc_lock.release()
     return cnt
+
 
 def getProxiesStatus():
     """
@@ -287,6 +299,7 @@ def getProxiesStatus():
         validated_proxies_cnt=validated_proxies_cnt,
         pending_proxies_cnt=pending_proxies_cnt
     )
+
 
 def pushClearFetchersStatus():
     """

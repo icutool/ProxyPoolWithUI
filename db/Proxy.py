@@ -2,6 +2,8 @@
 
 import datetime
 import random
+
+
 class Proxy(object):
     """
     代理，用于表示数据库中的一个记录
@@ -23,14 +25,14 @@ class Proxy(object):
         PRIMARY KEY (protocol, ip, port)
     )
     """,
-    """
-    CREATE INDEX IF NOT EXISTS proxies_fetcher_name_index
-    ON proxies(fetcher_name)
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS proxies_to_validate_date_index
-    ON proxies(to_validate_date ASC)
-    """]
+            """
+            CREATE INDEX IF NOT EXISTS proxies_fetcher_name_index
+            ON proxies(fetcher_name)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS proxies_to_validate_date_index
+            ON proxies(to_validate_date ASC)
+            """]
 
     def __init__(self):
         self.fetcher_name = None
@@ -43,7 +45,7 @@ class Proxy(object):
         self.validate_date = None
         self.to_validate_date = datetime.datetime.now()
         self.validate_failed_cnt = 0
-    
+
     def params(self):
         """
         返回一个元组，包含自身的全部属性
@@ -54,7 +56,7 @@ class Proxy(object):
             self.validated, self.latency,
             self.validate_date, self.to_validate_date, self.validate_failed_cnt
         )
-    
+
     def to_dict(self):
         """
         返回一个dict，包含自身的全部属性
@@ -71,7 +73,7 @@ class Proxy(object):
             'to_validate_date': str(self.to_validate_date) if self.to_validate_date is not None else None,
             'validate_failed_cnt': self.validate_failed_cnt
         }
-    
+
     @staticmethod
     def decode(row):
         """
@@ -91,7 +93,7 @@ class Proxy(object):
         p.to_validate_date = row[8]
         p.validate_failed_cnt = row[9]
         return p
-    
+
     def validate(self, success, latency):
         """
         传入一次验证结果，根据验证结果调整自身属性，并返回是否删除这个代理
@@ -99,12 +101,13 @@ class Proxy(object):
         返回 : True/False，True表示这个代理太差了，应该从数据库中删除
         """
         self.latency = latency
-        if success: # 验证成功
+        if success:  # 验证成功
             self.validated = True
             self.validate_date = datetime.datetime.now()
             self.validate_failed_cnt = 0
-            #self.to_validate_date = datetime.datetime.now() + datetime.timedelta(minutes=30)  # 30分钟之后继续验证
-            self.to_validate_date = datetime.datetime.now() + datetime.timedelta(minutes=random.randint(10, 60))  # 10·60分钟之后继续验证
+            # self.to_validate_date = datetime.datetime.now() + datetime.timedelta(minutes=30)  # 30分钟之后继续验证
+            self.to_validate_date = datetime.datetime.now() + datetime.timedelta(
+                minutes=random.randint(10, 60))  # 10·60分钟之后继续验证
             return False
         else:
             self.validated = False
