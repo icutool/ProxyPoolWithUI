@@ -3,13 +3,20 @@
 """
 封装的数据库接口
 """
-
+import json
+import logging
+import sys
 from config import DATABASE_PATH
+from util.xdbSearcher import searcher
 from .Proxy import Proxy
 from .Fetcher import Fetcher
 import sqlite3
 import datetime
 import threading
+
+logging.basicConfig(stream=sys.stdout, format="%(asctime)s-%(levelname)s:%(name)s:%(message)s", level='INFO')
+logger = logging.getLogger('conn')
+
 
 conn = sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
 # 线程锁
@@ -52,7 +59,7 @@ def pushNewFetch(fetcher_name, protocol, ip, port):
             UPDATE proxies SET fetcher_name=?,to_validate_date=? WHERE protocol=? AND ip=? AND port=?
         """, (p.fetcher_name, min(datetime.datetime.now(), old_p.to_validate_date), p.protocol, p.ip, p.port))
     else:
-        c.execute('INSERT INTO proxies VALUES (?,?,?,?,?,?,?,?,?)', p.params())
+        c.execute('INSERT INTO proxies VALUES (?,?,?,?,?,?,?,?,?,?)', p.params())
     c.close()
     conn.commit()
     conn_lock.release()
@@ -101,13 +108,20 @@ def pushValidateResult(proxy, success, latency):
     if should_remove:
         conn.execute('DELETE FROM proxies WHERE protocol=? AND ip=? AND port=?', (p.protocol, p.ip, p.port))
     else:
+        ip_country = None
+        try:
+            region_str = searcher.search(p.ip)
+            ip_country = region_str.split("|")[0]
+            logger.info(f'ip:{p.ip} 归属地:{ip_country}')
+        except Exception as e:
+            print(e)
         conn.execute("""
             UPDATE proxies
-            SET fetcher_name=?,validated=?,latency=?,validate_date=?,to_validate_date=?,validate_failed_cnt=?
+            SET fetcher_name=?,validated=?,latency=?,validate_date=?,to_validate_date=?,validate_failed_cnt=?,country=?
             WHERE protocol=? AND ip=? AND port=?
         """, (
             p.fetcher_name, p.validated, p.latency, p.validate_date, p.to_validate_date, p.validate_failed_cnt,
-            p.protocol, p.ip, p.port
+            p.protocol, p.ip, p.port, ip_country
         ))
     conn.commit()
     conn_lock.release()

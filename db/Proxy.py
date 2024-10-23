@@ -12,6 +12,7 @@ class Proxy(object):
     (
         fetcher_name VARCHAR(255) NOT NULL,
         protocol VARCHAR(32) NOT NULL,
+        country VARCHAR(255),
         ip VARCHAR(255) NOT NULL,
         port INTEGER NOT NULL,
         validated BOOLEAN NOT NULL,
@@ -34,6 +35,7 @@ class Proxy(object):
     def __init__(self):
         self.fetcher_name = None
         self.protocol = None
+        self.country = None
         self.ip = None
         self.port = None
         self.validated = False
@@ -48,7 +50,7 @@ class Proxy(object):
         """
         return (
             self.fetcher_name,
-            self.protocol, self.ip, self.port,
+            self.protocol, self.country, self.ip, self.port,
             self.validated, self.latency,
             self.validate_date, self.to_validate_date, self.validate_failed_cnt
         )
@@ -60,6 +62,7 @@ class Proxy(object):
         return {
             'fetcher_name': self.fetcher_name,
             'protocol': self.protocol,
+            'country': self.country,
             'ip': self.ip,
             'port': self.port,
             'validated': self.validated,
@@ -75,17 +78,18 @@ class Proxy(object):
         将sqlite返回的一行解析为Proxy
         row : sqlite返回的一行
         """
-        assert len(row) == 9
+        assert len(row) == 10
         p = Proxy()
         p.fetcher_name = row[0]
         p.protocol = row[1]
-        p.ip = row[2]
-        p.port = row[3]
-        p.validated = bool(row[4])
-        p.latency = row[5]
-        p.validate_date = row[6]
-        p.to_validate_date = row[7]
-        p.validate_failed_cnt = row[8]
+        p.country = row[2]
+        p.ip = row[3]
+        p.port = row[4]
+        p.validated = bool(row[5])
+        p.latency = row[6]
+        p.validate_date = row[7]
+        p.to_validate_date = row[8]
+        p.validate_failed_cnt = row[9]
         return p
     
     def validate(self, success, latency):
